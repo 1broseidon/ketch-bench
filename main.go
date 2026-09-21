@@ -14,11 +14,11 @@ import (
 
 const usage = `Ketch extraction benchmark
 
-  go -C bench run . setup             fetch the corpus archive if needed, validate snapshots and annotations
-  go -C bench run . run               measure the current binary (built automatically)
-  go -C bench run . check             compare with baseline.json, fail on regressions
-  go -C bench run . update-baseline   explicitly replace the accepted baseline
-  go -C bench run . live              fetch candidate snapshots; never replace gold data
+  go run . setup             fetch the corpus archive if needed, validate snapshots and annotations
+  go run . run               measure the current binary (built automatically)
+  go run . check             compare with baseline.json, fail on regressions
+  go run . update-baseline   explicitly replace the accepted baseline
+  go run . live              fetch candidate snapshots; never replace gold data
 
 Accuracy runs are offline with temporary config and tag paths; extract uses no page cache.
 run reports known misses; check --strict also fails every critical miss.
@@ -70,19 +70,19 @@ func entry(ctx context.Context, args []string) error {
 func parseOptions(command string, args []string) (options, error) {
 	opts := options{Mode: "default", ExtractMode: "complete", Iterations: 7, Warmup: 1, Workers: 1, Timeout: 20 * time.Second, SpeedRatio: 2, AccuracyDrop: .005}
 	set := flag.NewFlagSet(command, flag.ContinueOnError)
-	set.StringVar(&opts.Dir, "dir", ".", "corpus directory (default: this bench directory; invoke via go -C bench or cd bench first)")
+	set.StringVar(&opts.Dir, "dir", ".", "corpus directory (default: this repository)")
 	if command == "setup" {
 		set.StringVar(&opts.Archive, "archive", "", "corpus archive URL or local .tar.gz path; overrides archive.json")
 	}
 	if command != "setup" {
-		set.StringVar(&opts.Out, "out", "", "output directory; defaults to bench/.runs/<command>-<mode>")
+		set.StringVar(&opts.Out, "out", "", "output directory; defaults to .runs/<command>-<mode>")
 		set.DurationVar(&opts.Timeout, "timeout", opts.Timeout, "timeout per invocation or live fetch")
 	}
 	if command != "setup" && command != "live" {
 		measurementFlags(set, &opts)
 	}
 	if command == "check" || command == "update-baseline" {
-		set.StringVar(&opts.Baseline, "baseline", "", "baseline JSON path; defaults to bench/baseline.json")
+		set.StringVar(&opts.Baseline, "baseline", "", "baseline JSON path; defaults to baseline.json")
 	}
 	if command == "check" {
 		set.Float64Var(&opts.SpeedRatio, "speed-ratio", opts.SpeedRatio, "maximum per-page median slowdown (also requires >2ms increase)")
@@ -95,7 +95,8 @@ func parseOptions(command string, args []string) (options, error) {
 }
 
 func measurementFlags(set *flag.FlagSet, opts *options) {
-	set.StringVar(&opts.Binary, "binary", "", "existing ketch binary; otherwise build current worktree outside timing")
+	set.StringVar(&opts.Binary, "binary", "", "existing ketch binary; otherwise build the ketch checkout outside timing")
+	set.StringVar(&opts.Ketch, "ketch", "", "ketch source checkout to build (default: ../ketch)")
 	set.StringVar(&opts.Mode, "mode", opts.Mode, "default or selector (assisted recovery, reported separately)")
 	set.StringVar(&opts.ExtractMode, "extract-mode", opts.ExtractMode, "extraction mode under test: complete or clean (the binary runs with KETCH_EXTRACT_MODE set to it)")
 	set.IntVar(&opts.Iterations, "iterations", opts.Iterations, "measured invocations per page")

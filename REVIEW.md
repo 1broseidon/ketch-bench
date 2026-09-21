@@ -90,10 +90,10 @@ go run ./bench run
 go run ./bench check
 
 # Same content results under concurrency; exit 1 for known critical misses.
-go run ./bench run -workers 4 -iterations 3 -warmup 0 -strict -out bench/.runs/stress500
+go run ./bench run -workers 4 -iterations 3 -warmup 0 -strict -out .runs/stress500
 
 # Assisted diagnosis; exit 1 for the 30 grouped-selector cases.
-go run ./bench run -mode selector -iterations 1 -warmup 0 -workers 4 -out bench/.runs/selector500
+go run ./bench run -mode selector -iterations 1 -warmup 0 -workers 4 -out .runs/selector500
 ```
 
 The accepted baseline records the 397 known misses; a passing regression check means no new loss against that snapshot, **not release approval or complete extraction**. Independent human annotation review, fresh evaluation sites, multilingual/encoding coverage and separate browser/PDF tracks remain future work.

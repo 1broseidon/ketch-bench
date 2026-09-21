@@ -56,9 +56,13 @@ func buildBinary(ctx context.Context, opts options, temp string) (string, error)
 		name += ".exe"
 	}
 	path := filepath.Join(temp, name)
+	src, err := ketchSource(opts.Ketch)
+	if err != nil {
+		return "", err
+	}
 	cmd := exec.CommandContext(ctx, "go", "build", "-o", path, ".")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	cmd.Dir = filepath.Dir(opts.Dir)
+	cmd.Dir = src
 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("build ketch: %w", err)
@@ -235,4 +239,22 @@ func runWorkers(ctx context.Context, fixtures []fixture, workers int, run func(f
 	close(jobs)
 	group.Wait()
 	return results
+}
+
+// ketchSource resolves the ketch checkout to build: -ketch, else a sibling
+// ketch/ directory next to this repository, which is how the two are laid
+// out during development.
+func ketchSource(flagValue string) (string, error) {
+	candidate := flagValue
+	if candidate == "" {
+		candidate = filepath.Join("..", "ketch")
+	}
+	abs, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(filepath.Join(abs, "go.mod")); err != nil {
+		return "", fmt.Errorf("no ketch checkout at %s: pass -ketch <dir> or -binary <path>", abs)
+	}
+	return abs, nil
 }

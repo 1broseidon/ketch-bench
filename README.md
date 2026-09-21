@@ -1,4 +1,9 @@
-# Extraction benchmark
+# ketch-bench
+
+The extraction benchmark for [ketch](https://github.com/1broseidon/ketch), kept
+in its own repository so the corpus, baselines and run reports never weigh on
+the ketch tree or its module zip. It builds the ketch checkout next to it
+(`../ketch`, or `-ketch <dir>`), or measures any binary with `-binary`.
 
 Measure extraction **content fidelity**: what intended text survives, what unwanted
 content comes along, and whether important facts and structures remain intact.
@@ -11,33 +16,31 @@ It measures extraction, not an agent's prior knowledge or ability to guess a
 correct answer. See [RESULTS.md](RESULTS.md) for the accepted measurement and
 [REVIEW.md](REVIEW.md) for the comparison and remaining failures.
 
-## Run from the repository root
+## Run
 
 ```sh
-go -C bench run . setup
-go -C bench run . run
-go -C bench run . check
+go run . setup
+go run . run
+go run . check
 
 # Concurrent consistency: 1,500 measured invocations across 500 distinct pages.
-go -C bench run . run -workers 4 -iterations 3 -warmup 0 -out .runs/stress500
+go run . run -workers 4 -iterations 3 -warmup 0 -out .runs/stress500
 
 # Diagnose recoverable selection losses separately.
-go -C bench run . run -mode selector -out .runs/selector
+go run . run -mode selector -out .runs/selector
 
 # Measure the clean extraction mode (config extract_mode = clean) against its own baseline.
-go -C bench run . run -extract-mode clean
-go -C bench run . check -extract-mode clean
+go run . run -extract-mode clean
+go run . check -extract-mode clean
 
 # Network availability, HTTP latency and candidate source capture.
-go -C bench run . live
+go run . live
 ```
 
-`make bench`, `make bench-check` and `make bench-live` are shortcuts. Pass extra
-flags with `BENCH_ARGS='-iterations 25'`. `go -C bench run . run -h` lists all
+`make run`, `make check` and `make live` are shortcuts. Pass extra
+flags with `BENCH_ARGS='-iterations 25'`. `go run . run -h` lists all
 flags. Go's flag parser accepts both `-flag` and `--flag`; flags follow the
-subcommand. `bench` is its own Go module (`bench/go.mod`), so its dependencies
-never ship inside `go install github.com/1broseidon/ketch@latest`;
-`go -C bench ...` (Go 1.20+) runs it in place without a `cd`.
+subcommand.
 
 The 500 snapshots and reference texts are not in the repository. `setup`
 downloads the 22 MB tarball named in [archive.json](archive.json), verifies its
@@ -45,7 +48,7 @@ sha256, and unpacks it into the gitignored `testdata/`; every other command
 fails with a pointer to `setup` until that has happened. `setup -archive
 <url-or-path>` takes the tarball from elsewhere, for instance a local copy.
 `corpus.json` still pins every file by hash, so a changed archive cannot pass
-unnoticed. To publish a new archive after adding pages, run `make bench-archive`
+unnoticed. To publish a new archive after adding pages, run `make archive`
 (a reproducible tarball with its sha256), upload it, and record both in
 `archive.json`.
 
@@ -57,7 +60,7 @@ Go modules; **the accuracy workload itself uses no network**.
 `-extract-mode complete|clean` selects the extraction mode under test by setting
 `KETCH_EXTRACT_MODE` for every invocation. Reports record it, and the clean mode's
 default output and baseline paths carry a `-clean` suffix
-(`bench/.runs/check-default-clean/`, `bench/baseline-clean.json`), so the two
+(`.runs/check-default-clean/`, `baseline-clean.json`), so the two
 modes never share a baseline.
 
 ## Corpus and independent expectations
@@ -148,7 +151,7 @@ embedded video are outside its text reference. These require separate tracks.
 ## Regression gates and reports
 
 Each run writes `results.json`, `RESULTS.md` and `markdown/<id>.md` under
-`bench/.runs/<command>-<mode>/` unless `-out` is supplied. That directory is
+`.runs/<command>-<mode>/` unless `-out` is supplied. That directory is
 ignored by Git. A command reuses its output path; give comparisons distinct
 `-out` directories. JSON is the machine interface; stdout prints a short result,
 and stderr carries diagnostics. There are no prompts.
@@ -171,16 +174,16 @@ selector mode currently exits 1 with those failed cases retained in its scores.
 
 ```sh
 # Deliberate acceptance after reviewing every accuracy and timing change.
-go -C bench run . update-baseline
-go -C bench run . update-baseline -extract-mode clean
+go run . update-baseline
+go run . update-baseline -extract-mode clean
 
 # Keep the checked-in readable snapshots in sync when accepting them.
-cp bench/.runs/update-baseline-default/RESULTS.md bench/RESULTS.md
-cp bench/.runs/update-baseline-default-clean/RESULTS.md bench/RESULTS-clean.md
+cp .runs/update-baseline-default/RESULTS.md RESULTS.md
+cp .runs/update-baseline-default-clean/RESULTS.md RESULTS-clean.md
 
 # Calibrate elsewhere without replacing the shared baseline.
-go -C bench run . update-baseline -baseline .runs/my-machine.json
-go -C bench run . check -baseline .runs/my-machine.json
+go run . update-baseline -baseline .runs/my-machine.json
+go run . check -baseline .runs/my-machine.json
 ```
 
 Baselines are always recorded from the harness's own self-built `CGO_ENABLED=0`
@@ -238,8 +241,8 @@ can reflect a nonce or widget rather than a changed article; review the source.
    the reference; hidden menus and controls do not. MDN availability notices and
    NPS `hidden="until-found"` panels are retained explicitly in this corpus.
 4. Add the case and hashes to `corpus.json`. Hash the *uncompressed* HTML and
-   exact reference bytes. Run `setup` and `go -C bench test ./...`.
-5. Publish a new archive: `make bench-archive`, upload the tarball, and update
+   exact reference bytes. Run `setup` and `go test ./...`.
+5. Publish a new archive: `make archive`, upload the tarball, and update
    the URL and sha256 in `archive.json`.
 5. Run both the previous and candidate binaries against the same new corpus. Preserve a timestamped manifest hash before the first run.
    Review every failure and artifact, then explicitly update the baseline. A
@@ -249,13 +252,13 @@ The harness imports no ketch extraction implementation for scoring. Goldmark
 parses emitted Markdown independently of ketch's HTML-to-Markdown converter.
 Tests damage negation, operators, indentation, links and table associations,
 and exercise timeout, oversized output, corrupt fixtures, hidden regressions,
-cancellation and nondeterminism. Run `go -C bench test ./...` and `go test ./extract` when changing it.
+cancellation and nondeterminism. Run `go test ./...` and `go test ./extract` when changing it.
 
 ## Contract ledger
 
 | Surface | Change | Risk | Compatibility | Verification |
 | --- | --- | --- | --- | --- |
-| Repository `bench/` commands and JSON reports | Add developer harness, schema 1 | R0 | No installed ketch command/MCP changes | Runner, scorer, source and gate tests; real corpus runs |
+| Benchmark commands and JSON reports | Add developer harness, schema 1 | R0 | No installed ketch command/MCP changes | Runner, scorer, source and gate tests; real corpus runs |
 | Code normalization | Narrow inline-style matching; cross-language fixtures | R2 | Same extraction API/flags; no host rules | Extract tests; before/after 20-site replay |
 | Corpus and baseline | Expand to 500 pages; archive the 100-page manifest/baseline/reports | R0 | Original 100 records and fixture hashes preserved exactly | Source validation, frozen hashes and preservation test |
 | Manifest/report cohorts | Add `scale` and `scale-new-sites` values | R0 | Existing fields, labels and scoring unchanged; custom manifests may omit cohort | Group, coverage and host-separation tests |

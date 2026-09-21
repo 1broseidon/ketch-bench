@@ -1,4 +1,4 @@
-module github.com/1broseidon/ketch/bench
+module github.com/1broseidon/ketch-bench
 
 go 1.25.7
 

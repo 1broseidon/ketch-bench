@@ -114,6 +114,7 @@ type report struct {
 type options struct {
 	Dir          string
 	Archive      string
+	Ketch        string
 	Binary       string
 	Out          string
 	Baseline     string
