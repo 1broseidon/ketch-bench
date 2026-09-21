@@ -69,7 +69,7 @@ func loadCorpusWithin(dir string, budget int) ([]fixture, string, error) {
 		}
 		f, err := readFixture(dir, spec)
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, "", fmt.Errorf("%s: %w; run `go -C bench run . setup` to fetch the corpus archive", spec.ID, err)
+			return nil, "", fmt.Errorf("%s: %w; run `go run . setup` to fetch the corpus archive", spec.ID, err)
 		}
 		if err != nil {
 			return nil, "", fmt.Errorf("%s: %w", spec.ID, err)
